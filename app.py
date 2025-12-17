@@ -8,18 +8,18 @@ from supabase import create_client
 from datetime import datetime
 import time
 
-# セッション履歴初期化
-if 'history' not in st.session_state:
-    st.session_state.history = []
-if 'last_status' not in st.session_state:
-    st.session_state.last_status = None
-
-# ページ設定
+# ページ設定 (must be first Streamlit command!)
 st.set_page_config(
     page_title="お風呂見守り",
     page_icon="🛁",
     layout="centered"
 )
+
+# セッション履歴初期化
+if 'history' not in st.session_state:
+    st.session_state.history = []
+if 'last_status' not in st.session_state:
+    st.session_state.last_status = None
 
 # カスタムCSS - 大きな状態表示
 st.markdown("""
