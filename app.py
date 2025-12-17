@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Bath Sensor Dashboard - Streamlit App (Native Components)
+Bath Sensor Dashboard - 独居高齢者見守りアプリ
+安全状態を一目で確認できるシンプルなデザイン
 """
 import streamlit as st
 from supabase import create_client
@@ -9,22 +10,49 @@ import time
 
 # ページ設定
 st.set_page_config(
-    page_title="お風呂センサー",
+    page_title="お風呂見守り",
     page_icon="🛁",
     layout="centered"
 )
 
-# 상태 카드 크기 확대 CSS
+# カスタムCSS - 大きな状態表示
 st.markdown("""
 <style>
-    /* 상태 카드 텍스트 크기 확대 */
-    div[data-testid="stAlert"] p {
-        font-size: 1.5rem !important;
-        padding: 0.5rem 0 !important;
+    /* メイン状態カード */
+    .safety-card {
+        padding: 2rem;
+        border-radius: 1rem;
+        text-align: center;
+        margin: 1rem 0;
     }
-    /* 컨테이너 내 텍스트 크기 확대 */
-    div[data-testid="stVerticalBlock"] .stMarkdown p {
-        font-size: 1.3rem;
+    .safety-safe {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: 3px solid #28a745;
+    }
+    .safety-caution {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        border: 3px solid #ffc107;
+    }
+    .safety-danger {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border: 3px solid #dc3545;
+    }
+    .safety-text {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    .safety-icon {
+        font-size: 4rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    /* サブ情報 */
+    .sub-info {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin: 0.5rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -46,7 +74,7 @@ def get_sensor_state():
         return None
 
 def format_time_ago(timestamp_str):
-    """更新時刻を「〇秒前」形式で表示"""
+    """更新時刻を表示"""
     if not timestamp_str:
         return "不明"
     try:
@@ -63,76 +91,87 @@ def format_time_ago(timestamp_str):
     except:
         return "不明"
 
+def get_safety_status(mode, status, is_drowning):
+    """安全状態を判定"""
+    if mode == 'drowning':
+        if is_drowning:
+            return 'danger', '危険', '⚠️', '溺水の可能性があります！'
+        elif status == 2:
+            return 'caution', '注意', '⚡', '動きが少なくなっています'
+        else:
+            return 'safe', '安全', '✅', '正常に入浴中です'
+    else:
+        # 位置検知モードは基本的に安全
+        return 'safe', '安全', '✅', '正常に検知中です'
+
+def get_location_text(mode, status):
+    """現在位置テキスト"""
+    if mode == 'location':
+        return '🚿 洗い場' if status == 1 else '🛁 浴槽'
+    else:
+        return '🛁 浴槽で入浴中'
+
+# =============================================================================
+# メインUI
+# =============================================================================
+
 # ヘッダー
-st.title("🛁 お風呂センサー")
-st.caption("リモート状態モニター")
+st.markdown("## 🛁 お風呂見守り")
 
 # 状態取得
 state = get_sensor_state()
 
 if state is None:
-    st.error("センサーに接続できません")
-    st.info("ローカルのFlaskサーバーが起動しているか確認してください")
+    st.markdown("""
+    <div class="safety-card safety-caution">
+        <span class="safety-icon">📡</span>
+        <p class="safety-text">接続待ち</p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.info("センサーからのデータを待っています...")
 else:
     mode = state.get('mode', 'location')
     status = state.get('status', 1)
     is_drowning = state.get('is_drowning', False)
     updated_at = state.get('updated_at')
 
-    # モード表示
-    if mode == 'location':
-        st.info("📍 **位置検知モード**")
-    else:
-        st.warning("🚨 **溺水検知モード**")
+    # 安全状態判定
+    safety_level, safety_text, safety_icon, safety_desc = get_safety_status(mode, status, is_drowning)
+
+    # メイン状態カード
+    st.markdown(f"""
+    <div class="safety-card safety-{safety_level}">
+        <span class="safety-icon">{safety_icon}</span>
+        <p class="safety-text">{safety_text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 状態説明
+    st.markdown(f'<p class="sub-info">{safety_desc}</p>', unsafe_allow_html=True)
 
     st.divider()
 
-    # ステータス表示 (大きいカード)
+    # サブ情報（2列）
     col1, col2 = st.columns(2)
 
-    if mode == 'location':
-        # 位置検知モード
-        with col1:
-            if status == 1:
-                st.success("## 🚿 洗い場")
-            else:
-                st.container(border=True).markdown("## 🚿 洗い場")
+    with col1:
+        location = get_location_text(mode, status)
+        st.metric(label="現在位置", value=location)
 
-        with col2:
-            if status == 2:
-                st.success("## 🛁 浴槽")
-            else:
-                st.container(border=True).markdown("## 🛁 浴槽")
+    with col2:
+        st.metric(label="最終更新", value=format_time_ago(updated_at))
 
-    else:
-        # 溺水検知モード
-        with col1:
-            if status == 1:
-                st.success("## 🛁 正常")
-            else:
-                st.container(border=True).markdown("## 🛁 浴槽")
+    # モード表示（小さく）
+    mode_text = "📍 位置検知モード" if mode == 'location' else "🚨 溺水検知モード"
+    st.caption(mode_text)
 
-        with col2:
-            if is_drowning:
-                st.error("## ⚠️ 溺水検知！")
-            elif status == 2:
-                st.warning("## ⚠️ 注意")
-            else:
-                st.container(border=True).markdown("## ✅ 安全")
-
-    st.divider()
-
-    # 最終更新時刻のみ表示
-    st.metric(label="最終更新", value=format_time_ago(updated_at))
-
-# 自動更新オプション
+# 自動更新
 st.divider()
-
 col1, col2 = st.columns([3, 1])
 with col1:
-    auto_refresh = st.checkbox("自動更新 (2秒間隔)", value=True)
+    auto_refresh = st.checkbox("自動更新 (2秒)", value=True)
 with col2:
-    if st.button("🔄 更新"):
+    if st.button("🔄"):
         st.rerun()
 
 if auto_refresh:
@@ -140,5 +179,4 @@ if auto_refresh:
     st.rerun()
 
 # フッター
-st.divider()
-st.caption("Bath Sensor Monitor v1.0")
+st.caption("Bath Monitor v2.0 - 独居高齢者見守りシステム")
