@@ -8,6 +8,12 @@ from supabase import create_client
 from datetime import datetime
 import time
 
+# セッション履歴初期化
+if 'history' not in st.session_state:
+    st.session_state.history = []
+if 'last_status' not in st.session_state:
+    st.session_state.last_status = None
+
 # ページ設定
 st.set_page_config(
     page_title="お風呂見守り",
@@ -164,6 +170,32 @@ else:
     # モード表示（小さく）
     mode_text = "📍 位置検知モード" if mode == 'location' else "🚨 溺水検知モード"
     st.caption(mode_text)
+
+    # 履歴記録 (状態変化時のみ)
+    current_key = f"{mode}_{status}_{is_drowning}"
+    if st.session_state.last_status != current_key:
+        st.session_state.history.insert(0, {
+            'time': datetime.now().strftime('%H:%M:%S'),
+            'status': safety_text,
+            'icon': safety_icon,
+            'location': get_location_text(mode, status),
+            'level': safety_level
+        })
+        # 最大20件保持
+        st.session_state.history = st.session_state.history[:20]
+        st.session_state.last_status = current_key
+
+    # 履歴表示
+    if st.session_state.history:
+        st.divider()
+        with st.expander("📋 状態履歴", expanded=False):
+            for h in st.session_state.history:
+                if h['level'] == 'danger':
+                    st.error(f"{h['time']} - {h['icon']} {h['status']} ({h['location']})")
+                elif h['level'] == 'caution':
+                    st.warning(f"{h['time']} - {h['icon']} {h['status']} ({h['location']})")
+                else:
+                    st.success(f"{h['time']} - {h['icon']} {h['status']} ({h['location']})")
 
 # 自動更新
 st.divider()
