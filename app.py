@@ -77,7 +77,6 @@ else:
     mode = state.get('mode', 'location')
     status = state.get('status', 1)
     is_drowning = state.get('is_drowning', False)
-    connected = state.get('connected', False)
     updated_at = state.get('updated_at')
 
     # モード表示
@@ -123,17 +122,8 @@ else:
 
     st.divider()
 
-    # メトリクス表示
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if connected:
-            st.metric(label="接続状態", value="🟢 接続中")
-        else:
-            st.metric(label="接続状態", value="🔴 未接続")
-
-    with col2:
-        st.metric(label="最終更新", value=format_time_ago(updated_at))
+    # 最終更新時刻のみ表示
+    st.metric(label="最終更新", value=format_time_ago(updated_at))
 
 # 自動更新オプション
 st.divider()
