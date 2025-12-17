@@ -14,6 +14,21 @@ st.set_page_config(
     layout="centered"
 )
 
+# 상태 카드 크기 확대 CSS
+st.markdown("""
+<style>
+    /* 상태 카드 텍스트 크기 확대 */
+    div[data-testid="stAlert"] p {
+        font-size: 1.5rem !important;
+        padding: 0.5rem 0 !important;
+    }
+    /* 컨테이너 내 텍스트 크기 확대 */
+    div[data-testid="stVerticalBlock"] .stMarkdown p {
+        font-size: 1.3rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Supabase接続
 @st.cache_resource
 def get_supabase():
@@ -73,38 +88,38 @@ else:
 
     st.divider()
 
-    # ステータス表示
+    # ステータス表示 (大きいカード)
     col1, col2 = st.columns(2)
 
     if mode == 'location':
         # 位置検知モード
         with col1:
             if status == 1:
-                st.success("🚿 **洗い場**")
+                st.success("## 🚿 洗い場")
             else:
-                st.container(border=True).markdown("🚿 洗い場")
+                st.container(border=True).markdown("## 🚿 洗い場")
 
         with col2:
             if status == 2:
-                st.success("🛁 **浴槽**")
+                st.success("## 🛁 浴槽")
             else:
-                st.container(border=True).markdown("🛁 浴槽")
+                st.container(border=True).markdown("## 🛁 浴槽")
 
     else:
         # 溺水検知モード
         with col1:
             if status == 1:
-                st.success("🛁 **正常**")
+                st.success("## 🛁 正常")
             else:
-                st.container(border=True).markdown("🛁 浴槽")
+                st.container(border=True).markdown("## 🛁 浴槽")
 
         with col2:
             if is_drowning:
-                st.error("⚠️ **溺水検知！**")
+                st.error("## ⚠️ 溺水検知！")
             elif status == 2:
-                st.warning("⚠️ **注意**")
+                st.warning("## ⚠️ 注意")
             else:
-                st.container(border=True).markdown("✅ 安全")
+                st.container(border=True).markdown("## ✅ 安全")
 
     st.divider()
 
